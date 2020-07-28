@@ -1,11 +1,13 @@
-import types
+import 
+    types,
+    x11/[x, keysym]
 
 # settings, or something along those lines
 # currently unused
 const 
     # default mod key, run xmodmap to see what the mod keys are on your current keyboard layout
     # Mod1 is alt and Mod4 is super
-    modifier* = "mod1"
+    modifier* = Mod1Mask
 
     # if it isn't obvious, hex values go here
     colours* = (
@@ -16,14 +18,14 @@ const
     # store keybindings here
     keybindings*: seq[Key] = @[
         closeWindow.initKey(
-            keys = @["c"],
-            mods = @[modifier, "shift"]),
+            key = XK_c,
+            mods = modifier),
 
         nextWindow.initKey(
-            keys = @["tab"],
-            mods = @[modifier]),
+            key = XK_Tab,
+            mods = modifier),
         
         spawnCustom.initKey(
-            keys = @["return"],
-            mods = @[modifier],
-            "st")]
+            key = XK_Return,
+            mods = modifier,
+            command = "st")]

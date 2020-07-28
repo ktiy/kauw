@@ -1,5 +1,6 @@
 import 
     x11/[x, xlib],
+    config, /types,
     logging, /logger
 
 type 
@@ -7,27 +8,32 @@ type
         display: PDisplay
         root: Window
 
+# Initialiazation stuff
+proc initShortcutKeys (wm: WindowManager)
+
 # Error Handlers
 proc onWMDetected (display: PDisplay, e: PXErrorEvent): cint{.cdecl.}
 proc onXError (display: PDisplay, e: PXErrorEvent): cint{.cdecl.}
 
 # Events
-proc onCreateNotify (wm: WindowManager, e: PXCreateWindowEvent): void
-proc onDestroyNotify (wm: WindowManager, e: PXDestroyWindowEvent): void
-proc onReparentNotify (wm: WindowManager, e: PXReparentEvent): void
-proc onMapNotify (wm: WindowManager, e: PXMapEvent): void
-proc onUnmapNotify (wm: WindowManager, e: PXUnmapEvent): void
-proc onConfigureNotify (wm: WindowManager, e: PXConfigureEvent): void
-proc onMapRequest (wm: WindowManager, e: PXMapRequestEvent): void
-proc onConfigureRequest (wm: WindowManager, e: PXConfigureRequestEvent): void
-proc onButtonPress (wm: WindowManager, e: PXButtonEvent): void
-proc onButtonRelease (wm: WindowManager, e: PXButtonEvent): void
-proc onMotionNotify (wm: WindowManager, e: PXMotionEvent): void
-proc onKeyPress (wm: WindowManager, e: PXKeyEvent): void
-proc onKeyRelease (wm: WindowManager, e: PXKeyEvent): void
+proc onCreateNotify (wm: WindowManager, e: PXCreateWindowEvent)
+proc onDestroyNotify (wm: WindowManager, e: PXDestroyWindowEvent)
+proc onReparentNotify (wm: WindowManager, e: PXReparentEvent)
+proc onMapNotify (wm: WindowManager, e: PXMapEvent)
+proc onUnmapNotify (wm: WindowManager, e: PXUnmapEvent)
+proc onConfigureNotify (wm: WindowManager, e: PXConfigureEvent)
+proc onMapRequest (wm: WindowManager, e: PXMapRequestEvent)
+proc onConfigureRequest (wm: WindowManager, e: PXConfigureRequestEvent)
+proc onButtonPress (wm: WindowManager, e: PXButtonEvent)
+proc onButtonRelease (wm: WindowManager, e: PXButtonEvent)
+proc onMotionNotify (wm: WindowManager, e: PXMotionEvent)
+proc onKeyPress (wm: WindowManager, e: PXKeyEvent)
+proc onKeyRelease (wm: WindowManager, e: PXKeyEvent)
 
 # Run window manager
 proc run* (wm: WindowManager) =
+    initShortcutKeys wm
+
     discard XSetErrorHandler onWMDetected # Temporary error handler if there is another window manager running
 
     discard wm.display.XSelectInput(wm.root, SubstructureNotifyMask or SubstructureRedirectMask)
@@ -66,6 +72,17 @@ proc createWindowManager*: WindowManager =
         display: display,
         root: display.DefaultRootWindow())
 
+# Initialization Stuff
+proc initShortcutKeys (wm: WindowManager) =
+    for key in config.keybindings:
+        discard wm.display.XGrabKey(
+            cint wm.display.XKeysymToKeycode(key.key),
+            cuint key.mods,
+            wm.root,
+            XBool true,
+            GrabModeAsync,
+            GrabModeAsync)
+
 # Error Handlers
 proc onWMDetected (display: PDisplay, e: PXErrorEvent): cint{.cdecl.} = 
     if e.theType == BadAccess:
@@ -98,7 +115,20 @@ proc onMapNotify (wm: WindowManager, e: PXMapEvent) = return
 proc onUnmapNotify (wm: WindowManager, e: PXUnmapEvent) = return
 proc onConfigureNotify (wm: WindowManager, e: PXConfigureEvent) = return
 proc onMapRequest (wm: WindowManager, e: PXMapRequestEvent) = return
-proc onConfigureRequest (wm: WindowManager, e: PXConfigureRequestEvent) = return
+
+proc onConfigureRequest (wm: WindowManager, e: PXConfigureRequestEvent) = 
+    var changes: PXWindowChanges
+
+    changes.x = e.x
+    changes.y = e.y
+    changes.width = e.width
+    changes.height = e.height
+    changes.border_width = e.border_width
+    changes.sibling = e.above
+    changes.stack_mode = e.detail 
+
+    discard wm.display.XConfigureWindow(e.window, cuint e.value_mask, changes)
+
 proc onButtonPress (wm: WindowManager, e: PXButtonEvent) = return
 proc onButtonRelease (wm: WindowManager, e: PXButtonEvent) = return
 proc onMotionNotify (wm: WindowManager, e: PXMotionEvent) = return
