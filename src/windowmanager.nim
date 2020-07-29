@@ -2,7 +2,7 @@ import
     x11/[x, xlib],
     config, /types,
     logging, /logger,
-    tables, os
+    tables, os, ptrmath
 
 type 
     WindowManager* = ref object
@@ -27,6 +27,9 @@ proc funcSpawnCustom (wm: WindowManager)
 # Error Handlers
 proc onWMDetected (display: PDisplay, e: PXErrorEvent): cint{.cdecl.}
 proc onXError (display: PDisplay, e: PXErrorEvent): cint{.cdecl.}
+
+# Main Loop
+proc tileWindows (wm: WindowManager)
 
 # Events
 proc onCreateNotify (wm: WindowManager, e: PXCreateWindowEvent)
@@ -80,6 +83,8 @@ proc run* (wm: WindowManager) =
         var e: XEvent
         discard wm.display.XNextEvent(addr e)
         
+        tileWindows wm
+
         case e.theType:
             of CreateNotify: wm.onCreateNotify addr e.xcreatewindow
             of DestroyNotify: wm.onDestroyNotify addr e.xdestroywindow
@@ -172,6 +177,28 @@ proc onXError (display: PDisplay, e: PXErrorEvent): cint{.cdecl.} =
         "   resource id: " & $e.resourceid)
 
     return 0
+
+# Main Loop
+proc tileWindows (wm: WindowManager) =
+    var
+        parent: Window
+        children: PWindow
+        n: cuint
+        w = cuint wm.display.XDisplayWidth 0
+        h = cuint wm.display.XDisplayHeight 0
+
+    discard wm.display.XQueryTree(wm.root, addr wm.root, addr parent, addr children, addr n)
+
+    if n == 1:
+        # only 1 window, keep it fullscreen
+        discard wm.display.XMoveResizeWindow(children[0], 0, 0, w, h)
+    else:
+        # resize master window to take up half the screen
+        discard wm.display.XMoveResizeWindow(children[0], 0, 0, cuint (w div 2), h)
+    
+        # maths, sort of explained here: https://i.imgur.com/fGxdfDh.png
+        for i in 1..n-1:
+            discard wm.display.XMoveResizeWindow(children[int i], cint w div 2, cint (i-1) * (h div (n-1)), w div 2, h div (n-1))
 
 # Events
 proc onCreateNotify (wm: WindowManager, e: PXCreateWindowEvent) = return

@@ -1,5 +1,5 @@
 # (/・・)ノ kauw window manager
-kauw is an expiremental window manager built for x11 using nim
+kauw is an expiremental tiling window manager built for x11 using nim
 
 currently it is but a skeleton of what's to come
 
