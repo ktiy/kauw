@@ -210,6 +210,7 @@ proc onConfigureNotify (wm: WindowManager, e: PXConfigureEvent) = return
 
 proc onMapRequest (wm: WindowManager, e: PXMapRequestEvent) =
     discard wm.display.XMapWindow(e.window)
+    tileWindows wm
 
 proc onConfigureRequest (wm: WindowManager, e: PXConfigureRequestEvent) =
     var changes: XWindowChanges
