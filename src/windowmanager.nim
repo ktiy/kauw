@@ -92,7 +92,7 @@ proc run* (wm: WindowManager) =
             of MotionNotify: wm.onMotionNotify addr e.xmotion
             of KeyPress: wm.onKeyPress addr e.xkey
             of KeyRelease: wm.onKeyRelease addr e.xkey
-            else: lvlWarn.log("ignored event")
+            else: lvlWarn.log("ignored event " & $e.theType)
 
 # Initialization Stuff
 proc initKeybindings (wm: WindowManager) =
@@ -105,7 +105,6 @@ proc initKeybindings (wm: WindowManager) =
             keyfunc = wm.procFromFunc key.keyfunc
         
         wm.keyhandlers[cuint keycode] = keyfunc
-        echo typeof wm.keyhandlers[cuint keycode]
 
         discard wm.display.XGrabKey(
             cint keycode,
@@ -175,10 +174,12 @@ proc onReparentNotify (wm: WindowManager, e: PXReparentEvent) = return
 proc onMapNotify (wm: WindowManager, e: PXMapEvent) = return
 proc onUnmapNotify (wm: WindowManager, e: PXUnmapEvent) = return
 proc onConfigureNotify (wm: WindowManager, e: PXConfigureEvent) = return
-proc onMapRequest (wm: WindowManager, e: PXMapRequestEvent) = return
 
-proc onConfigureRequest (wm: WindowManager, e: PXConfigureRequestEvent) = 
-    var changes: PXWindowChanges
+proc onMapRequest (wm: WindowManager, e: PXMapRequestEvent) =
+    discard wm.display.XMapWindow(e.window)
+
+proc onConfigureRequest (wm: WindowManager, e: PXConfigureRequestEvent) =
+    var changes: XWindowChanges
 
     changes.x = e.x
     changes.y = e.y
@@ -188,7 +189,7 @@ proc onConfigureRequest (wm: WindowManager, e: PXConfigureRequestEvent) =
     changes.sibling = e.above
     changes.stack_mode = e.detail 
 
-    discard wm.display.XConfigureWindow(e.window, cuint e.value_mask, changes)
+    discard wm.display.XConfigureWindow(e.window, cuint e.value_mask, addr changes)
 
 proc onButtonPress (wm: WindowManager, e: PXButtonEvent) = return
 proc onButtonRelease (wm: WindowManager, e: PXButtonEvent) = return

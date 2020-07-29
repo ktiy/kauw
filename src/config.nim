@@ -19,7 +19,7 @@ const
     keybindings*: seq[Key] = @[
         closeWindow.initKey(
             key = "c",
-            mods = modifier or ShiftMask),  # TODO: seq here instaed of x or y # currently XMask or YMask or ZMask
+            mods = modifier or ShiftMask),
 
         nextWindow.initKey(
             key = "Tab",
