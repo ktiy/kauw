@@ -1,5 +1,3 @@
-import x11/[x]
-
 type    
     KeyFunc* = enum
         closeWindow,
@@ -7,12 +5,12 @@ type
         spawnCustom
     
     Key* = object
-        mods*: int
-        key*: KeySym
+        mods*: cuint
+        key*: string
         keyfunc*: KeyFunc
         command*: string
 
-proc initKey* (keyfunc: KeyFunc, mods: int, key: KeySym, command = ""): Key =
+proc initKey* (keyfunc: KeyFunc, mods: cuint, key: string, command = ""): Key =
     return Key(
         mods: mods,
         key: key,

@@ -1,15 +1,27 @@
 import 
     x11/[x, xlib],
     config, /types,
-    logging, /logger
+    logging, /logger,
+    tables
 
 type 
     WindowManager* = ref object
         display: PDisplay
+        screen: PScreen
+        colormap: Colormap
         root: Window
 
+        keyhandlers: Table[cuint, proc (wm: WindowManager)]
+
 # Initialiazation stuff
-proc initShortcutKeys (wm: WindowManager)
+proc initKeybindings (wm: WindowManager)
+proc initButtons (wm: WindowManager)
+
+# KeyFunc Handlers
+proc procFromFunc (wm: WindowManager, keyfunc: KeyFunc): proc (wm: WindowManager)
+proc funcCloseWindow (wm: WindowManager)
+proc funcNextWindow (wm: WindowManager)
+proc funcSpawnCustom (wm: WindowManager)
 
 # Error Handlers
 proc onWMDetected (display: PDisplay, e: PXErrorEvent): cint{.cdecl.}
@@ -30,9 +42,30 @@ proc onMotionNotify (wm: WindowManager, e: PXMotionEvent)
 proc onKeyPress (wm: WindowManager, e: PXKeyEvent)
 proc onKeyRelease (wm: WindowManager, e: PXKeyEvent)
 
+# Create a window manager
+proc createWindowManager*: WindowManager =
+    var display = XOpenDisplay nil
+    
+    if display == nil:
+        lvlError.log("failed to open X display " & $XDisplayName nil)
+        quit QuitFailure
+    
+    var 
+        screen = display.DefaultScreenOfDisplay()
+        keyhandlers = initTable[cuint, proc (wm: WindowManager)](1)
+    
+    return WindowManager(
+        display: display,
+        screen: screen,
+        colormap: screen.DefaultColormapOfScreen(),
+        root: display.DefaultRootWindow(),
+        
+        keyhandlers: keyhandlers)
+
 # Run window manager
 proc run* (wm: WindowManager) =
-    initShortcutKeys wm
+    initKeybindings wm
+    initButtons wm
 
     discard XSetErrorHandler onWMDetected # Temporary error handler if there is another window manager running
 
@@ -42,8 +75,8 @@ proc run* (wm: WindowManager) =
     discard XSetErrorHandler onXError
 
     while true:
-        var e: PXEvent
-        discard wm.display.XNextEvent e
+        var e: XEvent
+        discard wm.display.XNextEvent(addr e)
         
         case e.theType:
             of CreateNotify: wm.onCreateNotify addr e.xcreatewindow
@@ -59,34 +92,62 @@ proc run* (wm: WindowManager) =
             of MotionNotify: wm.onMotionNotify addr e.xmotion
             of KeyPress: wm.onKeyPress addr e.xkey
             of KeyRelease: wm.onKeyRelease addr e.xkey
-            else: consoleLog.log(lvlWarn, "ignored event")
-
-proc createWindowManager*: WindowManager =
-    var display = XOpenDisplay nil
-    
-    if display == nil:
-        consoleLog.log(lvlError, "failed to open X display " & $XDisplayName nil)
-        quit QuitFailure
-    
-    return WindowManager(
-        display: display,
-        root: display.DefaultRootWindow())
+            else: lvlWarn.log("ignored event")
 
 # Initialization Stuff
-proc initShortcutKeys (wm: WindowManager) =
+proc initKeybindings (wm: WindowManager) =
+    discard wm.display.XUngrabKey(AnyKey, AnyModifier, wm.root)
+
     for key in config.keybindings:
+        var 
+            keysym = XStringToKeysym key.key
+            keycode = wm.display.XKeysymToKeycode keysym
+            keyfunc = wm.procFromFunc key.keyfunc
+        
+        wm.keyhandlers[cuint keycode] = keyfunc
+        echo typeof wm.keyhandlers[cuint keycode]
+
         discard wm.display.XGrabKey(
-            cint wm.display.XKeysymToKeycode(key.key),
-            cuint key.mods,
-            wm.root,
+            cint keycode,
+            key.mods,
+            wm.root, 
             XBool true,
             GrabModeAsync,
             GrabModeAsync)
 
+proc initButtons (wm: WindowManager) =
+    discard wm.display.XUngrabButton(AnyButton, AnyModifier, wm.root)
+
+    for button in [1, 3]:
+        discard wm.display.XGrabButton(
+            cuint button,
+            cuint Mod1Mask,
+            wm.root,
+            XBool true,
+            ButtonPressMask or ButtonReleaseMask or PointerMotionMask,
+            GrabModeAsync,
+            GrabModeAsync,
+            None,
+            None)
+
+# KeyFunc Handlers
+proc procFromFunc (wm: WindowManager, keyfunc: KeyFunc): proc (wm: WindowManager) =
+    let procFuncTable = {
+        closeWindow: funcCloseWindow,
+        nextWindow: funcNextWindow,
+        spawnCustom: funcSpawnCustom}.toTable
+    
+    return procFuncTable[keyfunc]
+
+# TODO: These
+proc funcCloseWindow (wm: WindowManager) = return
+proc funcNextWindow (wm: WindowManager) = return
+proc funcSpawnCustom (wm: WindowManager) = return
+
 # Error Handlers
 proc onWMDetected (display: PDisplay, e: PXErrorEvent): cint{.cdecl.} = 
     if e.theType == BadAccess:
-        consoleLog.log(lvlError, "other window manager detected")
+        lvlError.log("another window manager is already running")
         quit QuitFailure
     
     return 0
@@ -99,11 +160,11 @@ proc onXError (display: PDisplay, e: PXErrorEvent): cint{.cdecl.} =
         cstring errorText,
         cint len errorText)
     
-    consoleLog.log(
-        lvlError, "received X error: \n" &
-                  "   request: " & $e.request_code & "\n" &
-                  "   error code: " & $e.error_code & " - " & errorText & "\n" &
-                  "   resource id: " & $e.resourceid)
+    lvlError.log(
+        "received X error: \n" &
+        "   request: " & $e.request_code & "\n" &
+        "   error code: " & $e.error_code & " - " & errorText & "\n" &
+        "   resource id: " & $e.resourceid)
 
     return 0
 
@@ -132,5 +193,9 @@ proc onConfigureRequest (wm: WindowManager, e: PXConfigureRequestEvent) =
 proc onButtonPress (wm: WindowManager, e: PXButtonEvent) = return
 proc onButtonRelease (wm: WindowManager, e: PXButtonEvent) = return
 proc onMotionNotify (wm: WindowManager, e: PXMotionEvent) = return
-proc onKeyPress (wm: WindowManager, e: PXKeyEvent) = return
+proc onKeyPress (wm: WindowManager, e: PXKeyEvent) =
+    lvlDebug.log("key event " & $e.keycode)
+    var handler = wm.keyhandlers[e.keycode]
+    handler wm
+
 proc onKeyRelease (wm: WindowManager, e: PXKeyEvent) = return
