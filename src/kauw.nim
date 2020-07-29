@@ -3,7 +3,8 @@ import
     /windowmanager,
     logging, /logger
 
-const version = "0.0.1"
+# 0.0.0 for DOESN'T FUNCTION YET!!
+const version = "0.0.0"
 
 proc main() =
     if paramCount() > 0:
