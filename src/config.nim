@@ -8,9 +8,12 @@ const
 
     # if it isn't obvious, hex values go here
     colours* = (
-        focused:    0xFBFDFF,
-        unfocused:  0x9BCDFF,
-        background: 0x232323)
+        focused:    "#FBFDFF",
+        unfocused:  "#9BCDFF",
+        background: "#232323")
+    
+    init* = @[
+        "xsetroot -solid \"" & colours.background & "\""]
     
     # in pixels
     frameWidth* = 2

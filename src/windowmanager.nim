@@ -2,7 +2,7 @@ import
     x11/[x, xlib],
     config, /types,
     logging, /logger,
-    tables
+    tables, os
 
 type 
     WindowManager* = ref object
@@ -16,6 +16,7 @@ type
 # Initialiazation stuff
 proc initKeybindings (wm: WindowManager)
 proc initButtons (wm: WindowManager)
+proc initCommands (wm: WindowManager)
 
 # KeyFunc Handlers
 proc procFromFunc (wm: WindowManager, keyfunc: KeyFunc): proc (wm: WindowManager)
@@ -66,6 +67,7 @@ proc createWindowManager*: WindowManager =
 proc run* (wm: WindowManager) =
     initKeybindings wm
     initButtons wm
+    initCommands wm
 
     discard XSetErrorHandler onWMDetected # Temporary error handler if there is another window manager running
 
@@ -128,6 +130,10 @@ proc initButtons (wm: WindowManager) =
             GrabModeAsync,
             None,
             None)
+
+proc initCommands (wm: WindowManager) =
+    for cmd in config.init:
+        discard execShellCmd cmd
 
 # KeyFunc Handlers
 proc procFromFunc (wm: WindowManager, keyfunc: KeyFunc): proc (wm: WindowManager) =
