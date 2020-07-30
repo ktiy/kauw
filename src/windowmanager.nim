@@ -2,7 +2,7 @@ import
     x11/[x, xlib],
     config, /keys,
     logging, /logger,
-    tables, os
+    tables, os, posix
 
 type 
     WindowManager* = ref object
@@ -12,7 +12,7 @@ type
         root: Window
 
         clients: seq[Window]
-        keys: Table[cuint, Key]
+        keys: Table[cuint, keys.Key]
 
 # Initialiazation stuff
 proc initKeybindings (wm: WindowManager)
@@ -60,7 +60,7 @@ proc createWindowManager*: WindowManager =
         root: display.DefaultRootWindow(),
         
         clients: @[],
-        keys: initTable[cuint, Key](1))
+        keys: initTable[cuint, keys.Key](1))
 
 # Run window manager
 proc run* (wm: WindowManager) =
@@ -135,7 +135,10 @@ proc initCommands (wm: WindowManager) =
 
 proc λcloseWindow (wm: WindowManager) = return
 proc λnextWindow (wm: WindowManager) = return
-proc λspawnCustom (wm: WindowManager, key: Key) = return
+proc λspawnCustom (wm: WindowManager, key: keys.Key) =
+    if fork() == 0:
+        discard execvp(key.command, nil)
+        quit QuitSuccess
 
 # Error Handlers
 proc onWMDetected (display: PDisplay, e: PXErrorEvent): cint{.cdecl.} = 
@@ -217,6 +220,7 @@ proc onButtonPress (wm: WindowManager, e: PXButtonEvent) = return
 proc onButtonRelease (wm: WindowManager, e: PXButtonEvent) = return
 proc onMotionNotify (wm: WindowManager, e: PXMotionEvent) = return
 proc onKeyPress (wm: WindowManager, e: PXKeyEvent) =
+    lvlDebug.log "key event " & $e.keycode
     let key = wm.keys[e.keycode]
     case key.keyfunc:
         of closeWindow: wm.λcloseWindow()

@@ -31,4 +31,4 @@ const
         spawnCustom.initKey(
             key = "Return",
             mods = modifier,
-            command = "st")]
+            command = "xterm")]
