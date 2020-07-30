@@ -24,8 +24,8 @@ $ nimble build
 ```
 and you can test using [xephyr]
 ```
-$ Xephyr -br -ac -noreset -screen 1920x1080 :1
-$ DISPLAY=:1 ./opozzumWM
+$ Xephyr -ac -screen 1980x1080 -br -reset -terminate 2> /dev/null :2 &
+$ DISPLAY=:1 ./kauw
 ```
 
 ## TODO
