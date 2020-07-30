@@ -8,8 +8,8 @@ const
 
     # if it isn't obvious, hex values go here
     colours* = (
-        focused:    "#FBFDFF",
-        unfocused:  "#9BCDFF",
+        focused:    "#fbfdff",
+        unfocused:  "#295eb3",
         background: "#232323")
     
     init* = @[
@@ -31,4 +31,4 @@ const
         spawnCustom.initKey(
             key = "Return",
             mods = modifier,
-            command = "xterm")]
+            command = "st")]

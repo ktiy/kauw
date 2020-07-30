@@ -2,7 +2,8 @@ import
     x11/[x, xlib],
     config, /keys,
     logging, /logger,
-    tables, os, posix
+    tables, os, posix,
+    strutils
 
 type 
     WindowManager* = ref object
@@ -12,6 +13,7 @@ type
         root: Window
 
         clients: seq[Window]
+        focused: int
         keys: Table[cuint, keys.Key]
 
 # Initialiazation stuff
@@ -42,6 +44,9 @@ proc onMotionNotify (wm: WindowManager, e: PXMotionEvent)
 proc onKeyPress (wm: WindowManager, e: PXKeyEvent)
 proc onKeyRelease (wm: WindowManager, e: PXKeyEvent)
 
+# Utils
+proc getColor (wm: WindowManager, color: string): culong
+
 # Create a window manager
 proc createWindowManager*: WindowManager =
     var display = XOpenDisplay nil
@@ -60,6 +65,7 @@ proc createWindowManager*: WindowManager =
         root: display.DefaultRootWindow(),
         
         clients: @[],
+        focused: -1,
         keys: initTable[cuint, keys.Key](1))
 
 # Run window manager
@@ -134,7 +140,15 @@ proc initCommands (wm: WindowManager) =
         discard execShellCmd cmd
 
 proc λcloseWindow (wm: WindowManager) = return
-proc λnextWindow (wm: WindowManager) = return
+proc λnextWindow (wm: WindowManager) =
+    var n = wm.clients.high
+    if n > 0:
+        if wm.focused == n: wm.focused = 0
+        else: wm.focused += 1
+        discard wm.display.XSetInputFocus(wm.clients[wm.focused], RevertToParent, CurrentTime)
+        tileWindows wm
+    lvlDebug.log $wm.focused
+
 proc λspawnCustom (wm: WindowManager, key: keys.Key) =
     if fork() == 0:
         discard execvp(key.command, nil)
@@ -167,24 +181,35 @@ proc onXError (display: PDisplay, e: PXErrorEvent): cint{.cdecl.} =
 
 proc addWindow (wm: WindowManager, w: Window) =
     wm.clients.add w
+    discard wm.display.XSetInputFocus(w, RevertToParent, CurrentTime)
+    wm.focused = wm.clients.high
 
 proc tileWindows (wm: WindowManager) =
     var 
         n = cuint wm.clients.len
         w = cuint wm.display.XDisplayWidth 0
         h = cuint wm.display.XDisplayHeight 0
+        c: culong
+        focused = wm.getColor config.colours.focused
+        unfocused = wm.getColor config.colours.unfocused
+        offset = cuint config.frameWidth*2
 
     if n == 0:
         return
     if n == 1:
-        discard wm.display.XMoveResizeWindow(wm.clients[0], 0, 0, w, h)
+        discard wm.display.XMoveResizeWindow(wm.clients[0], 0, 0, w-offset, h-offset)
+        discard wm.display.XSetWindowBorder(wm.clients[0], wm.getColor(config.colours.focused))
     else:
         # resize master window to take up half the screen
-        discard wm.display.XMoveResizeWindow(wm.clients[0], 0, 0, cuint (w div 2), h)
+        discard wm.display.XMoveResizeWindow(wm.clients[0], 0, 0, (w div 2)-offset, h-offset)
+        c = if wm.focused == 0: focused else: unfocused
+        discard wm.display.XSetWindowBorder(wm.clients[0], c)
     
         # maths, sort of explained here: https://i.imgur.com/fGxdfDh.png
         for i in 1..wm.clients.len-1:
-            discard wm.display.XMoveResizeWindow(wm.clients[i], cint w div 2, cint (i-1) * cint (h div (n-1)), w div 2, h div (n-1))
+            discard wm.display.XMoveResizeWindow(wm.clients[i], cint w div 2, cint (i-1) * cint (h div (n-1)), (w div 2)-offset, (h div (n-1))-offset)
+            c = if wm.focused == i: focused else: unfocused
+            discard wm.display.XSetWindowBorder(wm.clients[i], c)
 
 # Events
 proc onCreateNotify (wm: WindowManager, e: PXCreateWindowEvent) = return
@@ -192,14 +217,15 @@ proc onDestroyNotify (wm: WindowManager, e: PXDestroyWindowEvent) = return
 proc onReparentNotify (wm: WindowManager, e: PXReparentEvent) = return
 proc onMapNotify (wm: WindowManager, e: PXMapEvent) = return
 proc onUnmapNotify (wm: WindowManager, e: PXUnmapEvent) =
+    if wm.focused == wm.clients.high: wm.focused -= 1
     wm.clients.delete wm.clients.find(e.window)
-    # seq.delete preserves order while seq.del may scramble it a little
     wm.tileWindows()
 
 proc onConfigureNotify (wm: WindowManager, e: PXConfigureEvent) = return
 
 proc onMapRequest (wm: WindowManager, e: PXMapRequestEvent) =
     discard wm.display.XMapWindow e.window
+    discard wm.display.XSetWindowBorderWidth(e.window, config.frameWidth)
     wm.addWindow e.window
     wm.tileWindows()
 
@@ -228,3 +254,16 @@ proc onKeyPress (wm: WindowManager, e: PXKeyEvent) =
         of spawnCustom: wm.λspawnCustom key
 
 proc onKeyRelease (wm: WindowManager, e: PXKeyEvent) = return
+
+# Utils
+proc getColor (wm: WindowManager, color: string): culong =
+    var 
+        c: XColor
+        cmap = wm.display.DefaultColormap 0
+    
+    discard wm.display.XAllocNamedColor(cmap, color, addr c, addr c) #[:
+        lvlError.log "error allocating color"
+        quit QuitFailure
+    ]#
+    
+    return c.pixel
