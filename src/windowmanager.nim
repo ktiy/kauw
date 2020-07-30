@@ -2,8 +2,7 @@ import
     x11/[x, xlib],
     config, /keys,
     logging, /logger,
-    tables, os, posix,
-    strutils
+    tables, os, posix
 
 type 
     WindowManager* = ref object
@@ -194,20 +193,33 @@ proc tileWindows (wm: WindowManager) =
         unfocused = wm.getColor config.colours.unfocused
         offset = cuint config.frameWidth*2
 
-    if n == 0:
-        return
+    if n == 0: return
     if n == 1:
         discard wm.display.XMoveResizeWindow(wm.clients[0], 0, 0, w-offset, h-offset)
-        discard wm.display.XSetWindowBorder(wm.clients[0], wm.getColor(config.colours.focused))
+        discard wm.display.XSetWindowBorder(wm.clients[0], focused)
+
     else:
         # resize master window to take up half the screen
         discard wm.display.XMoveResizeWindow(wm.clients[0], 0, 0, (w div 2)-offset, h-offset)
+
         c = if wm.focused == 0: focused else: unfocused
         discard wm.display.XSetWindowBorder(wm.clients[0], c)
     
         # maths, sort of explained here: https://i.imgur.com/fGxdfDh.png
+        var 
+            leftoverPixels = h - ((n-1) * (h div (n-1)))
+            lastEnd: cint = 0
+
         for i in 1..wm.clients.len-1:
-            discard wm.display.XMoveResizeWindow(wm.clients[i], cint w div 2, cint (i-1) * cint (h div (n-1)), (w div 2)-offset, (h div (n-1))-offset)
+            var height = (h div (n-1))
+            if leftoverPixels > 0: 
+                height += 1
+                leftoverPixels -= 1
+
+            discard wm.display.XMoveResizeWindow(wm.clients[i], cint w div 2, lastEnd, (w div 2)-offset, height-offset)
+            
+            lastEnd += cint height
+
             c = if wm.focused == i: focused else: unfocused
             discard wm.display.XSetWindowBorder(wm.clients[i], c)
 
