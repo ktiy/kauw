@@ -2,7 +2,7 @@ import
     x11/[x, xlib],
     config, /types,
     logging, /logger,
-    tables, os, ptrmath
+    tables, os
 
 type 
     WindowManager* = ref object
@@ -12,6 +12,8 @@ type
         root: Window
 
         keyhandlers: Table[cuint, proc (wm: WindowManager)]
+
+        clients: seq[Window]
 
 # Initialiazation stuff
 proc initKeybindings (wm: WindowManager)
@@ -28,7 +30,8 @@ proc funcSpawnCustom (wm: WindowManager)
 proc onWMDetected (display: PDisplay, e: PXErrorEvent): cint{.cdecl.}
 proc onXError (display: PDisplay, e: PXErrorEvent): cint{.cdecl.}
 
-# Main Loop
+# Function
+proc addWindow (wm: WindowManager, w: Window)
 proc tileWindows (wm: WindowManager)
 
 # Events
@@ -64,7 +67,9 @@ proc createWindowManager*: WindowManager =
         colormap: screen.DefaultColormapOfScreen(),
         root: display.DefaultRootWindow(),
         
-        keyhandlers: keyhandlers)
+        keyhandlers: keyhandlers,
+        
+        clients: @[])
 
 # Run window manager
 proc run* (wm: WindowManager) =
@@ -178,39 +183,44 @@ proc onXError (display: PDisplay, e: PXErrorEvent): cint{.cdecl.} =
 
     return 0
 
-# Main Loop
+
+proc addWindow (wm: WindowManager, w: Window) =
+    wm.clients.add w
+
 proc tileWindows (wm: WindowManager) =
-    var
-        parent: Window
-        children: PWindow
-        n: cuint
+    var 
+        n = cuint wm.clients.len
         w = cuint wm.display.XDisplayWidth 0
         h = cuint wm.display.XDisplayHeight 0
 
-    discard wm.display.XQueryTree(wm.root, addr wm.root, addr parent, addr children, addr n)
-
+    if n == 0:
+        return
     if n == 1:
-        # only 1 window, keep it fullscreen
-        discard wm.display.XMoveResizeWindow(children[0], 0, 0, w, h)
+        discard wm.display.XMoveResizeWindow(wm.clients[0], 0, 0, w, h)
     else:
         # resize master window to take up half the screen
-        discard wm.display.XMoveResizeWindow(children[0], 0, 0, cuint (w div 2), h)
+        discard wm.display.XMoveResizeWindow(wm.clients[0], 0, 0, cuint (w div 2), h)
     
         # maths, sort of explained here: https://i.imgur.com/fGxdfDh.png
-        for i in 1..n-1:
-            discard wm.display.XMoveResizeWindow(children[int i], cint w div 2, cint (i-1) * (h div (n-1)), w div 2, h div (n-1))
+        for i in 1..wm.clients.len-1:
+            discard wm.display.XMoveResizeWindow(wm.clients[i], cint w div 2, cint (i-1) * cint (h div (n-1)), w div 2, h div (n-1))
 
 # Events
 proc onCreateNotify (wm: WindowManager, e: PXCreateWindowEvent) = return
 proc onDestroyNotify (wm: WindowManager, e: PXDestroyWindowEvent) = return
 proc onReparentNotify (wm: WindowManager, e: PXReparentEvent) = return
 proc onMapNotify (wm: WindowManager, e: PXMapEvent) = return
-proc onUnmapNotify (wm: WindowManager, e: PXUnmapEvent) = return
+proc onUnmapNotify (wm: WindowManager, e: PXUnmapEvent) =
+    wm.clients.delete wm.clients.find(e.window)
+    # seq.delete preserves order while seq.del may scramble it a little
+    wm.tileWindows()
+
 proc onConfigureNotify (wm: WindowManager, e: PXConfigureEvent) = return
 
 proc onMapRequest (wm: WindowManager, e: PXMapRequestEvent) =
-    discard wm.display.XMapWindow(e.window)
-    tileWindows wm
+    discard wm.display.XMapWindow e.window
+    wm.addWindow e.window
+    wm.tileWindows()
 
 proc onConfigureRequest (wm: WindowManager, e: PXConfigureRequestEvent) =
     var changes: XWindowChanges
