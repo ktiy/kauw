@@ -1,6 +1,6 @@
 import 
     x11/[x, xlib],
-    config, /types,
+    config, /keys,
     logging, /logger,
     tables, os
 
@@ -11,20 +11,13 @@ type
         colormap: Colormap
         root: Window
 
-        keyhandlers: Table[cuint, proc (wm: WindowManager)]
-
         clients: seq[Window]
+        keys: Table[cuint, Key]
 
 # Initialiazation stuff
 proc initKeybindings (wm: WindowManager)
 proc initButtons (wm: WindowManager)
 proc initCommands (wm: WindowManager)
-
-# KeyFunc Handlers
-proc procFromFunc (wm: WindowManager, keyfunc: KeyFunc): proc (wm: WindowManager)
-proc funcCloseWindow (wm: WindowManager)
-proc funcNextWindow (wm: WindowManager)
-proc funcSpawnCustom (wm: WindowManager)
 
 # Error Handlers
 proc onWMDetected (display: PDisplay, e: PXErrorEvent): cint{.cdecl.}
@@ -59,7 +52,6 @@ proc createWindowManager*: WindowManager =
     
     var 
         screen = display.DefaultScreenOfDisplay()
-        keyhandlers = initTable[cuint, proc (wm: WindowManager)](1)
     
     return WindowManager(
         display: display,
@@ -67,9 +59,8 @@ proc createWindowManager*: WindowManager =
         colormap: screen.DefaultColormapOfScreen(),
         root: display.DefaultRootWindow(),
         
-        keyhandlers: keyhandlers,
-        
-        clients: @[])
+        clients: @[],
+        keys: initTable[cuint, Key](1))
 
 # Run window manager
 proc run* (wm: WindowManager) =
@@ -111,12 +102,9 @@ proc initKeybindings (wm: WindowManager) =
     discard wm.display.XUngrabKey(AnyKey, AnyModifier, wm.root)
 
     for key in config.keybindings:
-        var 
-            keysym = XStringToKeysym key.key
-            keycode = wm.display.XKeysymToKeycode keysym
-            keyfunc = wm.procFromFunc key.keyfunc
-        
-        wm.keyhandlers[cuint keycode] = keyfunc
+        let keycode = wm.display.XKeysymToKeycode(XStringToKeysym key.key)
+
+        wm.keys[cuint keycode] = key
 
         discard wm.display.XGrabKey(
             cint keycode,
@@ -145,19 +133,9 @@ proc initCommands (wm: WindowManager) =
     for cmd in config.init:
         discard execShellCmd cmd
 
-# KeyFunc Handlers
-proc procFromFunc (wm: WindowManager, keyfunc: KeyFunc): proc (wm: WindowManager) =
-    let procFuncTable = {
-        closeWindow: funcCloseWindow,
-        nextWindow: funcNextWindow,
-        spawnCustom: funcSpawnCustom}.toTable
-    
-    return procFuncTable[keyfunc]
-
-# TODO: These
-proc funcCloseWindow (wm: WindowManager) = return
-proc funcNextWindow (wm: WindowManager) = return
-proc funcSpawnCustom (wm: WindowManager) = return
+proc λcloseWindow (wm: WindowManager) = return
+proc λnextWindow (wm: WindowManager) = return
+proc λspawnCustom (wm: WindowManager, key: Key) = return
 
 # Error Handlers
 proc onWMDetected (display: PDisplay, e: PXErrorEvent): cint{.cdecl.} = 
@@ -239,8 +217,10 @@ proc onButtonPress (wm: WindowManager, e: PXButtonEvent) = return
 proc onButtonRelease (wm: WindowManager, e: PXButtonEvent) = return
 proc onMotionNotify (wm: WindowManager, e: PXMotionEvent) = return
 proc onKeyPress (wm: WindowManager, e: PXKeyEvent) =
-    lvlDebug.log("key event " & $e.keycode)
-    var handler = wm.keyhandlers[e.keycode]
-    handler wm
+    let key = wm.keys[e.keycode]
+    case key.keyfunc:
+        of closeWindow: wm.λcloseWindow()
+        of nextWindow: wm.λnextWindow()
+        of spawnCustom: wm.λspawnCustom key
 
 proc onKeyRelease (wm: WindowManager, e: PXKeyEvent) = return

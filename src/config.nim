@@ -1,4 +1,4 @@
-import types, x11/x
+import /keys, x11/x
 
 # settings, or something along those lines
 const 
