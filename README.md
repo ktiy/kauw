@@ -11,7 +11,9 @@ i have a few goals in mind while writing this project
 - be small and fairly minimalist
 - help myself learn nim and get around x11
 
-  
+## config
+the default config is [src/config.def.nim]; you can duplicate it (and be sure to rename it to config.nim) and make changes to your liking
+
 ## development
 clone using
 ```

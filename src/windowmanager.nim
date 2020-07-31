@@ -64,7 +64,7 @@ proc createWindowManager*: WindowManager =
         root: display.DefaultRootWindow(),
         
         clients: @[],
-        focused: -1,
+        focused: 0,
         keys: initTable[cuint, keys.Key](1))
 
 # Run window manager
@@ -138,7 +138,11 @@ proc initCommands (wm: WindowManager) =
     for cmd in config.init:
         discard execShellCmd cmd
 
-proc λcloseWindow (wm: WindowManager) = return
+proc λcloseWindow (wm: WindowManager) =
+    var n = wm.clients.len
+    if n > 0:
+        discard wm.display.XDestroyWindow wm.clients[wm.focused]
+
 proc λnextWindow (wm: WindowManager) =
     var n = wm.clients.high
     if n > 0:
@@ -230,7 +234,8 @@ proc onReparentNotify (wm: WindowManager, e: PXReparentEvent) = return
 proc onMapNotify (wm: WindowManager, e: PXMapEvent) = return
 proc onUnmapNotify (wm: WindowManager, e: PXUnmapEvent) =
     if wm.focused == wm.clients.high: wm.focused -= 1
-    wm.clients.delete wm.clients.find(e.window)
+    let index = wm.clients.find(e.window)
+    if index > -1: wm.clients.delete index
     wm.tileWindows()
 
 proc onConfigureNotify (wm: WindowManager, e: PXConfigureEvent) = return
