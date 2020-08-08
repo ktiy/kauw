@@ -155,9 +155,7 @@ proc λnextWindow (wm: WindowManager) =
 proc λsetMaster (wm: WindowManager) =
     var n = wm.focused
     if n != 0:
-        let temp = wm.clients[n]
-        wm.clients[n] = wm.clients[0]
-        wm.clients[0] = temp
+        swap(wm.clients[n], wm.clients[0])
         wm.focused = 0
         tileWindows wm
     lvlDebug.log $wm.focused
@@ -244,7 +242,9 @@ proc onReparentNotify (wm: WindowManager, e: PXReparentEvent) = return
 proc onMapNotify (wm: WindowManager, e: PXMapEvent) = return
 proc onUnmapNotify (wm: WindowManager, e: PXUnmapEvent) =
     if wm.focused == wm.clients.high: wm.focused -= 1
-    discard wm.display.XSetInputFocus(wm.clients[wm.focused], RevertToParent, CurrentTime)
+    if wm.focused > -1:
+        discard wm.display.XSetInputFocus(wm.clients[wm.focused], RevertToParent, CurrentTime)
+
     let index = wm.clients.find(e.window)
     if index > -1: wm.clients.delete index
     wm.tileWindows()
