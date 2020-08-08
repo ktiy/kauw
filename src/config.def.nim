@@ -31,6 +31,12 @@ const
             nextWindow,
             key = "Tab",
             mods = modifier),
+
+        # alt + . will set the focused window to the master window
+        initKey(
+            setMaster,
+            key = "period",
+            mods = modifier),
         
         # alt + return will open st, you can replace this with whatever your preferred terminal is
         initKey(

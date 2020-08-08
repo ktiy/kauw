@@ -152,6 +152,16 @@ proc λnextWindow (wm: WindowManager) =
         tileWindows wm
     lvlDebug.log $wm.focused
 
+proc λsetMaster (wm: WindowManager) =
+    var n = wm.focused
+    if n != 0:
+        let temp = wm.clients[n]
+        wm.clients[n] = wm.clients[0]
+        wm.clients[0] = temp
+        wm.focused = 0
+        tileWindows wm
+    lvlDebug.log $wm.focused
+
 proc λspawnCustom (wm: WindowManager, key: keys.Key) =
     if fork() == 0:
         discard execvp(key.command, nil)
@@ -267,8 +277,9 @@ proc onKeyPress (wm: WindowManager, e: PXKeyEvent) =
     lvlDebug.log "key event " & $e.keycode
     let key = wm.keys[e.keycode]
     case key.keyfunc:
-        of closeWindow: wm.λcloseWindow()
-        of nextWindow: wm.λnextWindow()
+        of closeWindow: wm.λcloseWindow
+        of nextWindow: wm.λnextWindow
+        of setMaster: wm.λsetMaster
         of spawnCustom: wm.λspawnCustom key
 
 proc onKeyRelease (wm: WindowManager, e: PXKeyEvent) = return

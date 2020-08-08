@@ -2,6 +2,7 @@ type
     KeyFunc* = enum
         closeWindow,
         nextWindow,
+        setMaster,
         spawnCustom
     
     Key* = object
