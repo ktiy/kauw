@@ -10,7 +10,7 @@ fox-cat <fox@confuck.com>
 kauw is an expiremental tiling window manager built for x11 using nim
 currently it is very minimal, but more features are planned/ hoped for
 
-.goals (・・；)
+== goals (・・；)
 ****
 i have a few goals in mind while working on this project
 * be written and configured entirely in {1}[nim]
@@ -20,13 +20,13 @@ i have a few goals in mind while working on this project
 * help myself learn and get around x11
 ****
 
-.(。ヘ°) configuration
+== (。ヘ°) configuration
 ****
 the default configuration file is {2}[`config.def.nim`]
 duplicate it and rename it to `config.nim`, and you can configure it from there
 ****
 
-.development ⊂(・ヮ・⊂)
+== development ⊂(・ヮ・⊂)
 ****
 clone using
 [source, bash]
