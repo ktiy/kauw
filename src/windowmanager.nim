@@ -234,7 +234,7 @@ proc tileWindows (wm: WindowManager) =
 
             c = if wm.focused == i: focused else: unfocused
             discard wm.display.XSetWindowBorder(wm.clients[i], c)
-
+        
 # Events
 proc onCreateNotify (wm: WindowManager, e: PXCreateWindowEvent) = return
 proc onDestroyNotify (wm: WindowManager, e: PXDestroyWindowEvent) = return

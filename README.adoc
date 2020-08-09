@@ -1,0 +1,55 @@
+= (/・・)ノ kauw window manager
+fox-cat <fox@confuck.com>
+
+:hardbreaks:
+:1: https://nim-lang.org
+:2: link:src/config.def.nim
+:3: https://wiki.archlinux.org/index.php/Xephyr
+:4: link:TODO
+
+kauw is an expiremental tiling window manager built for x11 using nim
+currently it is very minimal, but more features are planned/ hoped for
+
+.goals (・・；)
+****
+i have a few goals in mind while working on this project
+* be written and configured entirely in {1}[nim]
+* be easily configurable
+* be easily hackable
+* be fairly small and minimalist
+* help myself learn and get around x11
+****
+
+.(。ヘ°) configuration
+****
+the default configuration file is {2}[`config.def.nim`]
+duplicate it and rename it to `config.nim`, and you can configure it from there
+****
+
+.development ⊂(・ヮ・⊂)
+****
+clone using
+[source, bash]
+----
+$ git clone https://github.com/fox-cat/kauw
+$ cd kauw
+----
+you can build using
+[source, bash]
+----
+$ nimble build
+----
+and you can test using {3}[Xephyr]
+[source, bash]
+----
+$ Xephyr -ac -screen 1980x1080 -br -reset -terminate 2> /dev/null :2 &
+$ DISPLAY=:1 ./kauw
+----
+****
+
+.(.づ◡﹏◡)づ. todo
+****
+see {4}[TODO]
+****
+
+image::img/kauw.png[kauw]
