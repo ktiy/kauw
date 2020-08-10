@@ -1,19 +1,8 @@
 import 
     x11/[x, xlib],
-    config, /keys,
-    logging, /logger,
-    tables, os, posix
-
-type 
-    WindowManager* = ref object
-        display: PDisplay
-        screen: PScreen
-        colormap: Colormap
-        root: Window
-
-        clients: seq[Window]
-        focused: int
-        keys: Table[cuint, keys.Key]
+    config, objects,
+    logging, logger,
+    tables, os, posix  
 
 # Initialiazation stuff
 proc initKeybindings (wm: WindowManager)
@@ -65,7 +54,7 @@ proc createWindowManager*: WindowManager =
         
         clients: @[],
         focused: 0,
-        keys: initTable[cuint, keys.Key](1))
+        keys: initTable[cuint, objects.Key](1))
 
 # Run window manager
 proc run* (wm: WindowManager) =
@@ -160,7 +149,7 @@ proc λsetMaster (wm: WindowManager) =
         tileWindows wm
     lvlDebug.log $wm.focused
 
-proc λspawnCustom (wm: WindowManager, key: keys.Key) =
+proc λspawnCustom (wm: WindowManager, key: objects.Key) =
     if fork() == 0:
         discard execvp(key.command, nil)
         quit QuitSuccess

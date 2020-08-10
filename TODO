@@ -1,6 +1,4 @@
 Todo:
-  [ ] Better config files
-  [ ] Literally everything!!
-  [ ] Support for multiple modifiers on keybinding
-  [ ] Optional title bars?
-  [ ] Documentation
+  [ ] Better configuration
+  [ ] More layouts
+  [x] Tiling

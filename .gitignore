@@ -1,4 +1,5 @@
 *.kra*
-*.swp
+*.kak*
+*.swp*
 */config.nim
 kauw

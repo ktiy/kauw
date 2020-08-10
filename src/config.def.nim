@@ -1,6 +1,6 @@
-import /keys, x11/x
+import objects, x11/x
 
-# settings, or something along those lines
+# config
 const 
     # default mod key, run xmodmap to see what the mod keys are on your current keyboard layout
     # Mod1 is alt and Mod4 is super
@@ -12,17 +12,16 @@ const
         unfocused:  "#295eb3",
         background: "#232323")
     
-    init* = @[
-        "xsetroot -solid \"" & colours.background & "\""]
-    
     # in pixels
     frameWidth* = 2
+
+    init* = @[
+        "xsetroot -solid \"" & colours.background & "\""]
 
     # store keybindings here
     keybindings*: seq[Key] = @[
         # alt + shift + q will close the focused window
-        initKey(
-            closeWindow,
+        initKey( closeWindow,
             key = "q",
             mods = modifier or ShiftMask),
 
