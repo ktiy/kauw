@@ -1,5 +1,5 @@
 # Package
-version       = "0.0.1"
+version       = "0.1.0"
 author        = "fox-cat"
 description   = "an expiremental window manager built for x11"
 license       = "MIT"

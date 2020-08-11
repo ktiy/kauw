@@ -43,14 +43,13 @@ proc createWindowManager*: WindowManager =
         lvlError.log("failed to open X display " & $XDisplayName nil)
         quit QuitFailure
     
-    var 
-        screen = display.DefaultScreenOfDisplay()
+    var screen = display.DefaultScreenOfDisplay
     
     return WindowManager(
         display: display,
         screen: screen,
-        colormap: screen.DefaultColormapOfScreen(),
-        root: display.DefaultRootWindow(),
+        colormap: screen.DefaultColormapOfScreen,
+        root: display.DefaultRootWindow,
         
         clients: @[],
         focused: -1,
@@ -58,9 +57,9 @@ proc createWindowManager*: WindowManager =
 
 # Run window manager
 proc run* (wm: WindowManager) =
-    initKeybindings wm
-    initButtons wm
-    initCommands wm
+    wm.initKeybindings
+    wm.initButtons
+    wm.initCommands
 
     discard XSetErrorHandler onWMDetected # Temporary error handler if there is another window manager running
 
@@ -73,7 +72,7 @@ proc run* (wm: WindowManager) =
         var e: XEvent
         discard wm.display.XNextEvent(addr e)
         
-        tileWindows wm
+        wm.tileWindows
 
         case e.theType:
             of CreateNotify: wm.onCreateNotify addr e.xcreatewindow
@@ -138,7 +137,7 @@ proc λnextWindow (wm: WindowManager) =
         if wm.focused == n: wm.focused = 0
         else: wm.focused += 1
         discard wm.display.XSetInputFocus(wm.clients[wm.focused], RevertToParent, CurrentTime)
-        tileWindows wm
+        wm.tileWindows
     lvlDebug.log $wm.focused
 
 proc λsetMaster (wm: WindowManager) =
@@ -146,7 +145,7 @@ proc λsetMaster (wm: WindowManager) =
     if n != 0:
         swap(wm.clients[n], wm.clients[0])
         wm.focused = 0
-        tileWindows wm
+        wm.tileWindows
     lvlDebug.log $wm.focused
 
 proc λspawnCustom (wm: WindowManager, key: objects.Key) =
@@ -234,7 +233,7 @@ proc onUnmapNotify (wm: WindowManager, e: PXUnmapEvent) =
 
     let ti = wm.clients.find(e.window)
     if ti > -1: wm.clients.delete ti
-    wm.tileWindows()
+    wm.tileWindows
 
 proc onConfigureNotify (wm: WindowManager, e: PXConfigureEvent) = return
 
@@ -242,7 +241,7 @@ proc onMapRequest (wm: WindowManager, e: PXMapRequestEvent) =
     discard wm.display.XMapWindow e.window
     discard wm.display.XSetWindowBorderWidth(e.window, config.frameWidth)
     wm.addWindow e.window
-    wm.tileWindows()
+    wm.tileWindows
 
 proc onConfigureRequest (wm: WindowManager, e: PXConfigureRequestEvent) =
     var changes: XWindowChanges
