@@ -23,7 +23,7 @@ type
         focused*: int
         keys*: Table[cuint, objects.Key]
 
-proc initKey* (keyfunc: KeyFunc, mods: cuint, key: string, command = ""): Key =
+proc key* (mods: cuint, key: string, keyfunc: KeyFunc, command = ""): Key =
     return Key(
         mods: mods,
         key: key,

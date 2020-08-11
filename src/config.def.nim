@@ -15,11 +15,11 @@ const
     # in pixels
     frameWidth* = 2
 
-    init* = @[
+    init* = [
         "xsetroot -solid \"" & colours.background & "\""]
 
     # store keybindings here
-    keybindings*: seq[Key] = @[
+    keybindings* = [
         # alt + shift + q will close the focused window
         initKey( closeWindow,
             key = "q",

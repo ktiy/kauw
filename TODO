@@ -1,4 +1,6 @@
 Todo:
   [ ] Better configuration
-  [ ] More layouts
+  [ ] Layout system (Allow for easy custom layouts)
   [x] Tiling
+  [ ] Gaps
+  [ ] Tags or workspaces
