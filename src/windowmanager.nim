@@ -53,7 +53,7 @@ proc createWindowManager*: WindowManager =
         root: display.DefaultRootWindow(),
         
         clients: @[],
-        focused: 0,
+        focused: -1,
         keys: initTable[cuint, objects.Key](1))
 
 # Run window manager
@@ -175,9 +175,7 @@ proc onXError (display: PDisplay, e: PXErrorEvent): cint{.cdecl.} =
         "   request: " & $e.request_code & "\n" &
         "   error code: " & $e.error_code & " - " & errorText & "\n" &
         "   resource id: " & $e.resourceid)
-
     return 0
-
 
 proc addWindow (wm: WindowManager, w: Window) =
     wm.clients.add w
@@ -234,8 +232,8 @@ proc onUnmapNotify (wm: WindowManager, e: PXUnmapEvent) =
     if wm.focused > -1:
         discard wm.display.XSetInputFocus(wm.clients[wm.focused], RevertToParent, CurrentTime)
 
-    let index = wm.clients.find(e.window)
-    if index > -1: wm.clients.delete index
+    let ti = wm.clients.find(e.window)
+    if ti > -1: wm.clients.delete ti
     wm.tileWindows()
 
 proc onConfigureNotify (wm: WindowManager, e: PXConfigureEvent) = return
